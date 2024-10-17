@@ -11,6 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
+from sqlalchemy import ForeignKey
 from forms import *
 import config 
 from flask_migrate import Migrate
@@ -78,6 +79,17 @@ class Artist(db.Model):
     def __repr__(self):
       return f'<Artist {self.id} {self.name}>'
     
+class Album(db.Model):
+   __tablename__='albums'
+   id = db.Column(db.Integer, primary_key=True)
+   artist_id= db.Column(db.Integer,db.ForeignKey('artists.id'),nullable=False)     
+   album_name =  db.Column(db.String,nullable=False)
+   album_image_link =  db.Column(db.String(500),nullable=False)
+   songs = db.Column(db.ARRAY(db.String()),nullable=False)
+   artists = db.relationship('Artist', backref='artist_album', lazy=True)
+
+   def __repr__(self):
+      return f'<Song {self.id} {self.name}>'
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
 with app.app_context():
@@ -337,6 +349,7 @@ def show_artist(artist_id):
   # TODO: replace with real artist data from the artist table, using artist_id
   artist = Artist.query.filter_by(id=artist_id).first_or_404()
   print( artist_id)
+  albums = db.session.query(Artist, Album).filter_by(id=artist_id).all()
   past_shows = db.session.query(Artist, Show).join(Show).join(Venue).\
     filter(
         Show.venue_id == Venue.id,
@@ -379,9 +392,18 @@ def show_artist(artist_id):
         'start_time': show.start_time.strftime("%m/%d/%Y, %H:%M")
     } for veneu, show in upcoming_shows],
     'past_shows_count': len(past_shows),
-    'upcoming_shows_count': len(upcoming_shows)
+    'upcoming_shows_count': len(upcoming_shows),
+    'song_album': [{
+        'artist_id': album.artists.id,
+        "artist_name":album.artists.name,
+        "artist_image_link": album.album_image_link,
+        "album_name": album.album_name,
+        "album_image_link": album.album_image_link,
+        "songs": album.songs
+    } for artist, album in albums],
+        "past_albums_count":len(albums)
     }
- 
+  print(f'Data: {data}')
   data = list(filter(lambda d: d['id'] == artist_id, [data]))[0]
   return render_template('pages/show_artist.html', artist=data)
 

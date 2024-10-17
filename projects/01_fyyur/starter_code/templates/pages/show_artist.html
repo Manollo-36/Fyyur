@@ -71,6 +71,22 @@
 		{% endfor %}
 	</div>
 </section>
+<section>
+	<h2 class="monospace">{{ artist.past_albums_count }} {% if artist.past_albums_count == 1 %}album{% else %}albums{% endif %}</h2>
+	<div class="row">
+		{%for album in artist.song_album %}
+		<div class="col-sm-4">
+			<div class="tile tile-show">
+				<img src="{{ album.album_image_link }}" alt="Song Album Image" />
+				<h5><a href="/artists/{{ album.artist_id }}">{{ album.album_name }}</a></h5>
+				<h6>{% for song in album.songs %}
+					<span class="genre">{{ song }}</span>
+					{% endfor %}</h6>
+			</div>
+		</div>
+		{% endfor %}
+	</div>
+</section> -
 
 <a href="/artists/{{ artist.id }}/edit"><button class="btn btn-primary btn-lg">Edit</button></a>
 
