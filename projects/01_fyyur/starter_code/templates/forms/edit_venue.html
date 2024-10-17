@@ -58,6 +58,7 @@
           </div>
       
       <input type="submit" value="Edit Venue" class="btn btn-primary btn-lg btn-block">
+      <input type="submit" value="Delete Venue" class="btn btn-primary btn-lg btn-block btn-danger" formaction="{{ url_for('delete_venue', venue_id=venue.id) }}">
     </form>
   </div>
 {% endblock %}
