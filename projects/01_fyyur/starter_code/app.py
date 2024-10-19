@@ -15,7 +15,7 @@ from sqlalchemy import ForeignKey
 from forms import *
 import config 
 from flask_migrate import Migrate
-
+from datetime import datetime, timedelta
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -83,10 +83,10 @@ class Album(db.Model):
    __tablename__='albums'
    id = db.Column(db.Integer, primary_key=True)
    artist_id= db.Column(db.Integer,db.ForeignKey('artists.id'),nullable=False)     
-   album_name =  db.Column(db.String,nullable=False)
-   album_image_link =  db.Column(db.String(500),nullable=False)
-   songs = db.Column(db.ARRAY(db.String()),nullable=False)
-   artists = db.relationship('Artist', backref='artist_album', lazy=True)
+   album_name =  db.Column(db.String,nullable=True)
+   album_cover_link =  db.Column(db.String(500),nullable=True)
+   songs = db.Column(db.ARRAY(db.String()),nullable=True)
+   artists = db.relationship('Artist', backref='artist_album', lazy=True ,cascade='all, delete')
 
    def __repr__(self):
       return f'<Song {self.id} {self.name}>'
@@ -396,9 +396,8 @@ def show_artist(artist_id):
     'song_album': [{
         'artist_id': album.artists.id,
         "artist_name":album.artists.name,
-        "artist_image_link": album.album_image_link,
         "album_name": album.album_name,
-        "album_image_link": album.album_image_link,
+        "album_cover_link": album.album_cover_link,
         "songs": album.songs
     } for artist, album in albums],
         "past_albums_count":len(albums)
@@ -519,9 +518,9 @@ def create_artist_submission():
           website_link=formArtist.website_link.data,
           seeking_venue=formArtist.seeking_venue.data,
           seeking_description=formArtist.seeking_description.data)
-          
           db.session.add(artist)
           db.session.commit()
+
           # TODO: modify data to be the data object returned from db insertion
           # on successful db insert, flash success
           
@@ -582,46 +581,104 @@ def create_show_submission():
 
   error = False
   formShow =ShowForm(request.form,meta={'csrf': False})
+  book_time_valid = Show.query.filter_by(artist_id = formShow.artist_id.data).filter(formShow.start_time.data < Show.start_time).all()
+  print(f'Time Query1: {book_time_valid}')
+  count = len(book_time_valid)
+   
   # Validate all fields
-  if formShow.validate():
-        try:  # TODO: modify data to be the data object returned from db insertion
-        # called upon submitting the new artist listing form
-          show = Show(artist_id=formShow.artist_id.data,
-          venue_id=formShow.venue_id.data,
-          start_time=formShow.start_time.data,          
-          )
-          db.session.add(show)
-          db.session.commit()
-        except Exception as e:          
-          error = True
-          db.session.rollback()
-          # TODO: on unsuccessful db insert, flash an error instead.
-          flash('An error occurred. Show could not be listed.')
-          print(e)
-        finally:
-          db.session.close()           
-          if  error == True:
-              return render_template('errors/500.html')
-              #abort(400)
-          else:
-            # on successful db insert, flash success
-            flash('Show was successfully listed!')           
-            return render_template('pages/home.html')
-  else:
-    message = []
-    for field, errors in formShow.errors.items():
-        for error in errors:
-            message.append(f"{field}: {error}")
-    # TODO: on unsuccessful db insert, flash an error instead.
-    flash('Please fix the following errors: ' + ', '.join(message))
-    form = ShowForm()()
-    return render_template('forms/new_venue.html', form=form)
+  if count == 0 :
+    if formShow.validate():
+          try:  # TODO: modify data to be the data object returned from db insertion
+          # called upon submitting the new artist listing form
+            show = Show(artist_id=formShow.artist_id.data,
+            venue_id=formShow.venue_id.data,
+            start_time=formShow.start_time.data,          
+            )
+            db.session.add(show)
+            db.session.commit()
+          except Exception as e:          
+            error = True
+            db.session.rollback()
+            # TODO: on unsuccessful db insert, flash an error instead.
+            flash('An error occurred. Show could not be listed.')
+            print(e)
+          finally:
+            db.session.close()           
+            if  error == True:
+                return render_template('errors/500.html')
+                #abort(400)
+            else:
+              # on successful db insert, flash success
+              flash('Show was successfully listed!')           
+              return render_template('pages/home.html')
+    else:
+      message = []
+      for field, errors in formShow.errors.items():
+          for error in errors:
+              message.append(f"{field}: {error}")
+      # TODO: on unsuccessful db insert, flash an error instead.
+      flash('Please fix the following errors: ' + ', '.join(message))
+      form = ShowForm()
+      return render_template('forms/new_show.html', form=form)
+  else:     
+    flash('Show was unsuccessfully listed! Start time ' + request.form['start_time']+' is not available!') 
+    form = ShowForm()
+    return render_template('forms/new_show.html', form=form)
+  
   # called to create new shows in the db, upon submitting new show listing form
   # TODO: insert form data as a new Show record in the db, instead 
   
 
   # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
   return render_template('pages/home.html')
+
+@app.route('/albums/create', methods=['GET'])
+def create_ambum_form():
+  form = AlbumForm()
+  return render_template('forms/new_album.html', form=form)
+
+@app.route('/albums/create', methods=['POST'])
+def create_album_submission():
+  error = False
+ # TODO: insert form data as a new Venue record in the db, instead
+  formAlbum =AlbumForm(request.form,meta={'csrf': False})
+  
+  song_list =formAlbum.song_names.data
+  songs = song_list.split(' ')
+ # Validate all fields
+  if formAlbum.validate():
+        try: # TODO: modify data to be the data object returned from db insertion     
+          album= Album(artist_id =formAlbum.artist_id.data,
+                       album_name = formAlbum.album_name.data,
+                       album_cover_link = formAlbum.album_cover_link.data,
+                       songs =songs )          
+          
+          db.session.add(album)
+          db.session.commit()
+        except ValueError as e:          
+          error = True
+          db.session.rollback()
+          # TODO: on unsuccessful db insert, flash an error instead.
+          flash('An error occurred. Album ' + request.form['album_name']  + ' could not be listed.')
+          print(e)
+        finally:
+          db.session.close()           
+          if  error == True:
+              return render_template('errors/500.html')              
+          else:  
+            # on successful db insert, flash success      
+            flash('Album ' + request.form['album_name'] + ' was successfully listed!')           
+            return render_template('pages/home.html')
+  else:
+    message = []
+    for field, errors in formAlbum.errors.items():
+        for error in errors:
+            message.append(f"{field}: {error}")
+    flash('Please fix the following errors: ' + ', '.join(message))
+    form = AlbumForm()()
+    return render_template('forms/new_album.html', form=form)
+
+
 
 @app.errorhandler(404)
 def not_found_error(error):
