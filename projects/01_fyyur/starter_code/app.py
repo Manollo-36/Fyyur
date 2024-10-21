@@ -506,7 +506,8 @@ def create_artist_submission():
   # Validate all fields
   
   if formArtist.validate():
-        try:           
+        try:# TODO: modify data to be the data object returned from db insertion
+          # on successful db insert, flash success           
         # called upon submitting the new artist listing form
           artist = Artist(name=formArtist.name.data,
           city=formArtist.city.data,
@@ -520,9 +521,6 @@ def create_artist_submission():
           seeking_description=formArtist.seeking_description.data)
           db.session.add(artist)
           db.session.commit()
-
-          # TODO: modify data to be the data object returned from db insertion
-          # on successful db insert, flash success
           
         except Exception as e:          
           error = True
