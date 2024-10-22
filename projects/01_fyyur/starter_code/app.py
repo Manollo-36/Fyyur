@@ -133,7 +133,7 @@ def venues():
     city =  venue.city
     state = venue.state
   # num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
-  upcoming_shows = db.session.query(Artist, Show).join(Show).join(Venue).\
+  upcoming_shows = db.session.query(Artist).join(Show).join(Venue).\
     filter(
         Show.venue_id == venue_id,
         Show.artist_id == Artist.id,
@@ -187,7 +187,7 @@ def search_venues():
 def show_venue(venue_id):
   venue = Venue.query.filter_by(id=venue_id).first_or_404()
   print( venue_id)
-  past_shows = db.session.query(Artist, Show).join(Show).join(Venue).\
+  past_shows = db.session.query(Artist).join(Show).join(Venue).\
     filter(
         Show.venue_id == venue_id,
         Show.artist_id == Artist.id,
@@ -195,7 +195,7 @@ def show_venue(venue_id):
     ).\
     all()
   
-  upcoming_shows = db.session.query(Artist, Show).join(Show).join(Venue).\
+  upcoming_shows = db.session.query(Artist).join(Show).join(Venue).\
     filter(
         Show.venue_id == venue_id,
         Show.artist_id == Artist.id,
@@ -350,7 +350,7 @@ def show_artist(artist_id):
   artist = Artist.query.filter_by(id=artist_id).first_or_404()
   print( artist_id)
   albums = db.session.query(Artist, Album).filter_by(id=artist_id).all()
-  past_shows = db.session.query(Artist, Show).join(Show).join(Venue).\
+  past_shows = db.session.query(Artist).join(Show).join(Venue).\
     filter(
         Show.venue_id == Venue.id,
         Show.artist_id == artist_id,
@@ -358,7 +358,7 @@ def show_artist(artist_id):
     ).\
     all()
   print( past_shows)
-  upcoming_shows = db.session.query(Artist, Show).join(Show).join(Venue).\
+  upcoming_shows = db.session.query(Artist).join(Show).join(Venue).\
     filter(
         Show.venue_id == Venue.id,
         Show.artist_id == artist_id,
@@ -554,7 +554,7 @@ def create_artist_submission():
 def shows():
    
   # displays list of shows at /shows
-  shows = db.session.query(Artist, Show).join(Show).join(Venue).all() 
+  shows = db.session.query(Artist).join(Show).join(Venue).all() 
   
   print(f'Shows:{shows}')
   data=[{
