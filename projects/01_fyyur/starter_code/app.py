@@ -1,13 +1,13 @@
 #----------------------------------------------------------------------------#
 # Imports
 #----------------------------------------------------------------------------#
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template, request, Response, flash, redirect, url_for
 from email.policy import default
 import json
 import dateutil.parser
 import babel
-from flask import Flask, render_template, request, Response, flash, redirect, url_for
 from flask_moment import Moment
-from flask_sqlalchemy import SQLAlchemy
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
@@ -16,6 +16,8 @@ from forms import *
 import config 
 from flask_migrate import Migrate
 from datetime import datetime, timedelta
+
+
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -26,11 +28,11 @@ moment = Moment(app)
 app.config.from_object('config')
 db = SQLAlchemy(app)
 migrate = Migrate(app,db)
-
 #----------------------------------------------------------------------------#
 # Models.
 #----------------------------------------------------------------------------#
 # TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
+
 class Show(db.Model):
    __tablename__='shows'   
    id= db.Column(db.Integer,primary_key=True)  
@@ -91,12 +93,11 @@ class Album(db.Model):
    def __repr__(self):
       return f'<Song {self.id} {self.name}>'
 
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
+
+# TODO: implement any missing fields, as a database migration using Flask-Migrate
+
 with app.app_context():
     db.create_all()
-
-
-
 
 #----------------------------------------------------------------------------#
 # Filters.
@@ -187,15 +188,15 @@ def search_venues():
 def show_venue(venue_id):
   venue = Venue.query.filter_by(id=venue_id).first_or_404()
   print( venue_id)
-  past_shows = db.session.query(Artist).join(Show).join(Venue).\
+  past_shows = db.session.query(Artist,Show).join(Show.artists).join(Venue).\
     filter(
         Show.venue_id == venue_id,
         Show.artist_id == Artist.id,
         Show.start_time < datetime.now()
     ).\
     all()
-  
-  upcoming_shows = db.session.query(Artist).join(Show).join(Venue).\
+  print(f'past_shows: {past_shows}')
+  upcoming_shows = db.session.query(Artist,Show).join(Show.artists).join(Venue).\
     filter(
         Show.venue_id == venue_id,
         Show.artist_id == Artist.id,
@@ -221,9 +222,9 @@ def show_venue(venue_id):
         'artist_id': artist.id,
         "artist_name": artist.name,
         "artist_image_link": artist.image_link,
-        "start_time": show.start_time.strftime("%m/%d/%Y, %H:%M")
+        "start_time":show.start_time.strftime("%m/%d/%Y, %H:%M")
     } 
-    for artist, show in past_shows],
+    for artist,show in past_shows],
     'upcoming_shows': [{
         'artist_id': artist.id,
         'artist_name': artist.name,
@@ -350,7 +351,7 @@ def show_artist(artist_id):
   artist = Artist.query.filter_by(id=artist_id).first_or_404()
   print( artist_id)
   albums = db.session.query(Artist, Album).filter_by(id=artist_id).all()
-  past_shows = db.session.query(Artist).join(Show).join(Venue).\
+  past_shows = db.session.query(Venue,Show).join(Show.venues).join(Artist).\
     filter(
         Show.venue_id == Venue.id,
         Show.artist_id == artist_id,
@@ -358,7 +359,7 @@ def show_artist(artist_id):
     ).\
     all()
   print( past_shows)
-  upcoming_shows = db.session.query(Artist).join(Show).join(Venue).\
+  upcoming_shows = db.session.query(Venue,Show).join(Show.venues).join(Artist).\
     filter(
         Show.venue_id == Venue.id,
         Show.artist_id == artist_id,
@@ -554,13 +555,13 @@ def create_artist_submission():
 def shows():
    
   # displays list of shows at /shows
-  shows = db.session.query(Artist).join(Show).join(Venue).all() 
+  shows = db.session.query(Venue,Show).join(Show.venues).join(Artist).all()
   
   print(f'Shows:{shows}')
   data=[{
-     "venue_id":show.venues.id,
-     "venue_name": show.venues.name,
-     "artist_id": show.artists.id,
+     "venue_id":venue.id,
+     "venue_name": venue.name,
+     "artist_id": show.artist_id,
      "artist_name": show.artists.name,
      "artist_image_link":show.artists.image_link,
        # "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80",
